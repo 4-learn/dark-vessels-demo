@@ -100,7 +100,7 @@ def visualize_embeddings(
     for label, color in label_to_color.items():
         plt.scatter([], [], c=[color], s=100, label=label)
 
-    plt.legend(loc='upper right', title='船舶類型')
+    plt.legend(loc='upper right', title='Ship')
     plt.title(title, fontsize=14, fontweight='bold')
     plt.xlabel('t-SNE Dimension 1')
     plt.ylabel('t-SNE Dimension 2')
@@ -143,7 +143,7 @@ def create_demo_data():
 
     # 新偵測
     embeddings.extend(new_detection)
-    labels.append("❓ 新偵測")
+    labels.append("? New Detection")
 
     return np.array(embeddings), labels
 
