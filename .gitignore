@@ -205,3 +205,19 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+.env
+
+# Roboflow datasets (too large for git)
+Boat-Detection-Model-*/
+Ship-Detection-*/
+**/datasets/
+
+# YOLO model weights (large files)
+*.pt
+
+# YOLO output
+runs/
+result*.jpg
+
+# Cloned repos
+yolov5/
