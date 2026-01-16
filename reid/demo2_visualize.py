@@ -215,6 +215,12 @@ def print_similarity_summary(similarity_matrix: np.ndarray, labels: list[str]):
             print(f"Gap: {gap:.3f} (larger = better separation)")
 
 
+def normalize(vectors: np.ndarray) -> np.ndarray:
+    """正規化向量（使 cosine similarity 在 -1 到 1 之間）"""
+    norms = np.linalg.norm(vectors, axis=1, keepdims=True)
+    return vectors / norms
+
+
 def create_demo_data():
     """
     建立示範用的假 Embedding 資料
@@ -225,24 +231,28 @@ def create_demo_data():
     np.random.seed(42)
 
     # 模擬 3 種船舶類型，每種 4 張照片
+    # 每艘船有一個「中心點」，加上一些隨機噪音
     ships = {
         "FISHING STAR": np.random.randn(4, 512) * 0.1 + np.array([1, 0] + [0]*510),
         "OCEAN TRADER": np.random.randn(4, 512) * 0.1 + np.array([-1, 1] + [0]*510),
         "ISLAND FERRY": np.random.randn(4, 512) * 0.1 + np.array([0, -1] + [0]*510),
     }
 
-    # 加入一個「新偵測」
+    # 加入一個「新偵測」（靠近 FISHING STAR）
     new_detection = np.random.randn(1, 512) * 0.1 + np.array([0.9, 0.1] + [0]*510)
 
     embeddings = []
     labels = []
 
     for ship_name, emb in ships.items():
-        embeddings.extend(emb)
+        # 正規化每個向量
+        emb_normalized = normalize(emb)
+        embeddings.extend(emb_normalized)
         labels.extend([ship_name] * len(emb))
 
-    # 新偵測
-    embeddings.extend(new_detection)
+    # 新偵測（也要正規化）
+    new_normalized = normalize(new_detection)
+    embeddings.extend(new_normalized)
     labels.append("? New Detection")
 
     return np.array(embeddings), labels
