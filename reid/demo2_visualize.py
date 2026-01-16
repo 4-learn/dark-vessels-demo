@@ -115,6 +115,106 @@ def visualize_embeddings(
     plt.show()
 
 
+def visualize_similarity_matrix(
+    embeddings: np.ndarray,
+    labels: list[str],
+    title: str = "Cosine Similarity Matrix"
+):
+    """
+    繪製相似度矩陣熱力圖
+
+    Args:
+        embeddings: (n_samples, 512) 的 Embedding 矩陣
+        labels: 每張圖的標籤
+        title: 圖表標題
+    """
+    n_samples = len(embeddings)
+
+    # 計算 cosine similarity 矩陣
+    # 因為已經正規化，直接用 dot product
+    similarity_matrix = np.dot(embeddings, embeddings.T)
+
+    # 繪製熱力圖
+    plt.figure(figsize=(10, 8))
+
+    im = plt.imshow(similarity_matrix, cmap='RdYlGn', vmin=0, vmax=1)
+    plt.colorbar(im, label='Cosine Similarity')
+
+    # 設定軸標籤
+    # 縮短標籤以便顯示
+    short_labels = [f"{i}:{l[:8]}" for i, l in enumerate(labels)]
+    plt.xticks(range(n_samples), short_labels, rotation=45, ha='right', fontsize=8)
+    plt.yticks(range(n_samples), short_labels, fontsize=8)
+
+    # 在格子中顯示數值
+    for i in range(n_samples):
+        for j in range(n_samples):
+            value = similarity_matrix[i, j]
+            # 根據數值選擇文字顏色
+            color = 'white' if value < 0.5 else 'black'
+            plt.text(j, i, f'{value:.2f}', ha='center', va='center',
+                    fontsize=7, color=color)
+
+    plt.title(title, fontsize=14, fontweight='bold')
+    plt.xlabel('Sample Index')
+    plt.ylabel('Sample Index')
+    plt.tight_layout()
+
+    # 儲存
+    output_path = "similarity_matrix.png"
+    plt.savefig(output_path, dpi=150, bbox_inches='tight')
+    print(f"[儲存] 相似度矩陣：{output_path}")
+
+    plt.show()
+
+    # 印出文字版摘要
+    print_similarity_summary(similarity_matrix, labels)
+
+
+def print_similarity_summary(similarity_matrix: np.ndarray, labels: list[str]):
+    """印出相似度摘要"""
+    print()
+    print("=" * 50)
+    print("Similarity Summary (512-dim cosine similarity)")
+    print("=" * 50)
+
+    # 找出每個樣本最相似的（排除自己）
+    n = len(labels)
+    for i in range(n):
+        # 複製一份，把自己設成 -1
+        sims = similarity_matrix[i].copy()
+        sims[i] = -1
+        best_j = np.argmax(sims)
+        best_sim = sims[best_j]
+
+        print(f"[{i}] {labels[i][:15]:15} -> Best match: [{best_j}] {labels[best_j][:15]:15} (sim={best_sim:.3f})")
+
+    # 群聚內 vs 群聚間的平均相似度
+    print()
+    print("-" * 50)
+    unique_labels = list(set(labels))
+
+    if len(unique_labels) > 1:
+        intra_sims = []  # 同群聚
+        inter_sims = []  # 不同群聚
+
+        for i in range(n):
+            for j in range(i + 1, n):
+                if labels[i] == labels[j]:
+                    intra_sims.append(similarity_matrix[i, j])
+                else:
+                    inter_sims.append(similarity_matrix[i, j])
+
+        if intra_sims:
+            print(f"Intra-cluster avg similarity: {np.mean(intra_sims):.3f} (same ship)")
+        if inter_sims:
+            print(f"Inter-cluster avg similarity: {np.mean(inter_sims):.3f} (different ships)")
+
+        if intra_sims and inter_sims:
+            gap = np.mean(intra_sims) - np.mean(inter_sims)
+            print(f"Gap: {gap:.3f} (larger = better separation)")
+
+
 def create_demo_data():
     """
     建立示範用的假 Embedding 資料
@@ -188,18 +288,25 @@ def main():
         print()
         embeddings, labels = create_demo_data()
 
-    # 視覺化
+    # 視覺化 1: t-SNE 2D 散點圖
     visualize_embeddings(
         embeddings,
         labels,
         title="Ship Embedding 2D Visualization (t-SNE)"
     )
 
+    # 視覺化 2: 相似度矩陣（真正用於判斷的數值）
+    visualize_similarity_matrix(
+        embeddings,
+        labels,
+        title="Cosine Similarity Matrix (512-dim)"
+    )
+
     print()
     print("[說明]")
-    print("  - 同一艘船的不同照片會群聚在一起")
-    print("  - 不同船舶會分散在不同區域")
-    print("  - 新偵測會落在最相似的船舶附近")
+    print("  - t-SNE 圖：視覺化群聚效果（2D 投影，形狀會變形）")
+    print("  - 相似度矩陣：實際比對用的數值（512 維，準確）")
+    print("  - 同船相似度高（綠色），不同船相似度低（紅色）")
 
 
 if __name__ == "__main__":
